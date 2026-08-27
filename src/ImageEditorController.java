@@ -1,4 +1,5 @@
 import java.io.File;
+import javax.swing.JOptionPane;
 
 public class ImageEditorController {
     private ImageEditorView view;
@@ -11,6 +12,13 @@ public class ImageEditorController {
         // hookup action listeners
         this.view.addLoadImageListener(e -> handleLoadImage());
         this.view.addNegativeListener(e -> handleNegativeFilter());
+
+        // --- LISTENERS AGREGADOS PARA CUMPLIR CON MVC Y EXCEPCIONES ---
+        this.view.addGrayscaleListener(e -> handleFilter("Grayscale"));
+        this.view.addBinarizeListener(e -> handleFilter("Binarize"));
+        this.view.addSaveImageListener(e -> handleSaveImage());
+        this.view.addUndoListener(e -> handleUndo());
+        this.view.addResetListener(e -> handleReset());
     }
 
     public void handleLoadImage() {
@@ -23,8 +31,10 @@ public class ImageEditorController {
             // mutate the application state
             model.setInputFileName(selectedFile.getAbsolutePath());
             model.setInputImage(ImageUtils.load(selectedFile.getAbsolutePath()));
+        } catch (InvalidImageFormatException e) {
+            view.showErrorDialog(e.getMessage());
         } catch (Exception e) {
-            // view.showErrorDialog("couldn't load image: " + e.getMessage());
+            view.showErrorDialog("couldn't load image: " + e.getMessage());
         }
 
         // we updated the state of the model, we must re-draw the view layer
@@ -34,15 +44,67 @@ public class ImageEditorController {
     // What do we want to do when someone presses the
     // negative filter button?
     private void handleNegativeFilter() {
-        Image negative = this.model.negativeFilter();
+        try {
+            Image negative = this.model.negativeFilter();
+            refresh();
+        } catch (NoImageLoadedException e) {
+            view.showErrorDialog(e.getMessage());
+        }
+    }
 
-        // application state changed, the view MUST be
-        // updated
-        this.view.showInputImage(ImageUtils.toBufferedImage(negative));
+    // --- MÉTODOS DE MANEJO AGREGADOS ---
+
+    private void handleFilter(String filterType) {
+        try {
+            this.model.applyFilter(filterType);
+            refresh();
+        } catch (NoImageLoadedException e) {
+            view.showErrorDialog(e.getMessage());
+        }
+    }
+
+    private void handleUndo() {
+        try {
+            this.model.undo();
+            refresh();
+        } catch (EmptyHistoryException e) {
+            view.showErrorDialog(e.getMessage());
+        }
+    }
+
+    private void handleReset() {
+        try {
+            this.model.reset();
+            refresh();
+        } catch (NoImageLoadedException e) {
+            view.showErrorDialog(e.getMessage());
+        }
+    }
+
+    private void handleSaveImage() {
+        File destination = view.showSaveImageChooser();
+        if (destination == null) {
+            return;
+        }
+
+        try {
+            this.model.saveImage(destination);
+            JOptionPane.showMessageDialog(null, "Imagen guardada correctamente.");
+        } catch (NoImageLoadedException e) {
+            view.showErrorDialog(e.getMessage());
+        } catch (Exception e) {
+            view.showErrorDialog("Error al guardar la imagen: " + e.getMessage());
+        }
     }
 
     // call the view to re-draw the application state
     private void refresh() {
-        view.showInputImage(ImageUtils.toBufferedImage(model.getInputImage()));
+        if (model.getInputImage() != null) {
+            view.showInputImage(ImageUtils.toBufferedImage(model.getOriginalImage()));
+        }
+        if (model.getOutputImage() != null) {
+            view.showOutputImage(ImageUtils.toBufferedImage(model.getOutputImage()));
+        }
+        view.updateHistory(model.getHistoryActions(), model.getHistorySize());
     }
 }

@@ -4,11 +4,16 @@ import java.io.IOException;
 import javax.imageio.ImageIO;
 
 public class ImageUtils {
-    public static Image load(String filename) {
+    public static Image load(String filename) throws InvalidImageFormatException, IOException {
+        File file = new File(filename);
+        if (!file.exists()) {
+            throw new InvalidImageFormatException("El archivo no existe: " + filename);
+        }
+
         try {
-            BufferedImage img = ImageIO.read(new File(filename));
+            BufferedImage img = ImageIO.read(file);
             if (img == null) {
-                return null;
+                throw new InvalidImageFormatException("El archivo no es un formato de imagen válido: " + filename);
             }
 
             int height = img.getHeight();
@@ -29,9 +34,9 @@ public class ImageUtils {
             }
 
             return new Image(pixels);
-        } catch (IOException e) {
-            System.out.println("Couldn't open image at: '" + filename + "': " + e.getMessage());
-            return null;
+        } finally {
+            // Requerimiento: bloque finally ejecutado independientemente del resultado
+            System.out.println("Proceso de lectura de imagen finalizado para: " + filename);
         }
     }
 
@@ -49,10 +54,17 @@ public class ImageUtils {
             format = filename.substring(dot + 1).toLowerCase();
         }
 
-        ImageIO.write(img, format, file);
+        try {
+            ImageIO.write(img, format, file);
+        } finally {
+            // Requerimiento: bloque finally para cierre o limpieza post-escritura
+            System.out.println("Proceso de guardado de imagen finalizado en: " + filename);
+        }
     }
 
     public static BufferedImage toBufferedImage(Image image) {
+        if (image == null) return null;
+        
         int height = image.getHeight();
         int width = image.getWidth();
 

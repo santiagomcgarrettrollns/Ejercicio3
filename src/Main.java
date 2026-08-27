@@ -1,19 +1,22 @@
 import com.formdev.flatlaf.FlatLightLaf;
-import javax.swing.*;
+import javax.swing.SwingUtilities;
 
 public class Main {
-  public static void main(String[] args) {
-    // must come before any component is created
-    FlatLightLaf.setup();
+    public static void main(String[] args) {
+        // Inicialización de FlatLaf (debe ir antes de crear cualquier componente GUI)
+        try {
+            FlatLightLaf.setup();
+        } catch (Exception e) {
+            System.err.println("No se pudo cargar el Look and Feel FlatLaf: " + e.getMessage());
+        }
 
-    SwingUtilities.invokeLater(() -> {
-      // Instantiate our 3 separate MVC classes
-      ImageEditorModel model = new ImageEditorModel();
-      ImageEditorView view = new ImageEditorView();
-      new ImageEditorController(model, view);
+        // Ejecución de la interfaz Swing en el Event Dispatch Thread (EDT)
+        SwingUtilities.invokeLater(() -> {
+            ImageEditorModel model = new ImageEditorModel();
+            ImageEditorView view = new ImageEditorView();
+            new ImageEditorController(model, view);
 
-      // all ready, make the window visible
-      view.setVisible(true);
-    });
-  }
+            view.setVisible(true);
+        });
+    }
 }
